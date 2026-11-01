@@ -40,6 +40,10 @@ enum class AnswerDoubleTapAction(
         preferenceValue = "openComments",
         label = "打开评论区",
     ),
+    OpenQuestion(
+        preferenceValue = "openQuestion",
+        label = "打开问题",
+    ),
     ToggleImmersive(
         preferenceValue = "toggleImmersive",
         label = "开关沉浸式",

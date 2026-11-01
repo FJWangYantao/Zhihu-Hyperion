@@ -413,6 +413,12 @@ fun ArticleScreen(
                 showComments = true
             }
 
+            AnswerDoubleTapAction.OpenQuestion -> {
+                if (viewModel.questionId > 0) {
+                    navigator.onNavigate(Question(viewModel.questionId, viewModel.title))
+                }
+            }
+
             AnswerDoubleTapAction.ToggleImmersive -> {
                 isImmersiveMode = !isImmersiveMode
             }
@@ -1415,6 +1421,18 @@ fun ArticleScreen(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text("设为打开评论区")
+                }
+                Button(
+                    onClick = {
+                        showDoubleTapActionDialog = false
+                        saveAnswerDoubleTapAction(AnswerDoubleTapAction.OpenQuestion)
+                        performAnswerDoubleTapAction(AnswerDoubleTapAction.OpenQuestion)
+                        userMessages.showMessage("已将双击回答动作设为：${AnswerDoubleTapAction.OpenQuestion.label}")
+                    },
+                    enabled = viewModel.questionId > 0,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("设为打开问题")
                 }
                 Button(
                     onClick = {

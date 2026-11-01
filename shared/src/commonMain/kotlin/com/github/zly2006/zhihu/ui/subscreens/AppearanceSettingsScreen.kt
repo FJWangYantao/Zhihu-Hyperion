@@ -1142,6 +1142,7 @@ fun AppearanceSettingsScreen(
                                                     AnswerDoubleTapAction.Ask -> AppIcons.Help
                                                     AnswerDoubleTapAction.VoteUp -> AppIcons.ThumbUp
                                                     AnswerDoubleTapAction.OpenComments -> AppIcons.Comment
+                                                    AnswerDoubleTapAction.OpenQuestion -> AppIcons.OpenInNew
                                                     AnswerDoubleTapAction.ToggleImmersive -> AppIcons.Fullscreen
                                                 },
                                                 contentDescription = null,
