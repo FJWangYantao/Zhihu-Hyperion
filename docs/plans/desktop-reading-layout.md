@@ -13,7 +13,7 @@
 
 ## 2. 根因
 
-分栏框架本身是完整的（[AdaptiveListDetail.kt:56](../shared/src/commonMain/kotlin/com/github/zly2006/zhihu/ui/AdaptiveListDetail.kt)）：
+分栏框架本身是完整的（[AdaptiveListDetail.kt:56](../../shared/src/commonMain/kotlin/com/github/zly2006/zhihu/ui/AdaptiveListDetail.kt)）：
 
 | 能力 | 实现 |
 | --- | --- |
@@ -23,7 +23,7 @@
 | 分隔条 | 16dp 热区 + 1dp `outlineVariant` 线，可拖 |
 | 空状态 | `EmptyDetailPane` |
 
-问题不在分栏，在阅读列没有宽度上限。[ArticleScreen.kt:910](../shared/src/commonMain/kotlin/com/github/zly2006/zhihu/ui/ArticleScreen.kt) 的正文容器只有：
+问题不在分栏，在阅读列没有宽度上限。[ArticleScreen.kt:910](../../shared/src/commonMain/kotlin/com/github/zly2006/zhihu/ui/ArticleScreen.kt) 的正文容器只有：
 
 ```kotlin
 Column(
@@ -37,7 +37,7 @@ Column(
 
 按 1920dp 窗口计算：左栏 1/3 ≈ 620dp + 分隔条 16dp + 右栏 ≈ 1284dp，正文可用宽度约 1250dp。16sp 中文单字约占 16dp，即一行 75 字以上。
 
-中文正文的舒适行宽是 30–40 字，对应 640–760dp。项目里已有同类先例：[LoginScreen.kt:101](../shared/src/commonMain/kotlin/com/github/zly2006/zhihu/account/LoginScreen.kt) 用 `LoginContentMaxWidth = 560.dp` 配合 `widthIn(max = ...)` 限制引导/登录页宽度。本次沿用同一思路。
+中文正文的舒适行宽是 30–40 字，对应 640–760dp。项目里已有同类先例：[LoginScreen.kt:101](../../shared/src/commonMain/kotlin/com/github/zly2006/zhihu/account/LoginScreen.kt) 用 `LoginContentMaxWidth = 560.dp` 配合 `widthIn(max = ...)` 限制引导/登录页宽度。本次沿用同一思路。
 
 ## 3. 目标
 
