@@ -1,79 +1,118 @@
-# 内置 AI 助手的可行性调研
+# 内置 AI 助手可行性与 Pi 核心接入方案
 
-> 状态：调研完成，功能尚未实现。本文只评估方案与工作量，仓库代码尚未修改。
+> 状态：已选定桌面端优先复用 Pi 核心的方向，尚未实现或完成运行验证。更新日期：2026-11-04。
+>
+> 本文的源码底座调查基于 `711e6ea`；Pi 能力来自公开文档与包元数据。实施前须核对当前代码，并固定实际验证的 Pi 版本与依赖，不能把上游 main 的描述当作运行验证结果。
 
-本文评估在 Zhihu-Hyperion 中新增 AI 助手的难度、已有底座、工作量与主要风险。结论基于 `711e6ea` 的源码。
+## 目标与选择
 
-## 结论
+在 Zhihu-Hyperion 自己的 Compose 界面内提供文章问答与有限工具能力，复用 Pi 的 agent 执行循环。用户无需另行安装 Claude Code、Pi CLI 或 Node.js。
 
-云端 AI 助手属于中等偏低难度。项目已有 `:feature:ai` 模块，包含 OpenAI 兼容流式请求、SSE 解析和配置界面；文章页已接入「总结本文」。缺的是通用聊天页、多轮会话、历史持久化和全局入口。
+桌面端由应用打包并管理后台运行时，加载 `pi-agent-core` 与 `pi-ai`；不引入 Pi 的终端 UI 或整个 coding agent，也不从 Claude Code 发行包中抽取内部代码。模型推理仍由用户配置的云端或兼容本地服务提供，Pi 核心不是模型权重或本地推理引擎。
 
-端侧大模型是另一类工程，不建议现在做。Lite 包目标小于 5 MB，当前只有 Android Full 带 ONNX 语义模型，而且该模型只做向量编码，不能生成文本。
+这一方向优先服务桌面三栏阅读工作台。Android/iOS 继续保留已有 AI 总结能力，本方案暂不承诺移动端运行同一套 Pi 核心，也不默认新增远端 agent 服务。
 
-## 已有能力
+## 已有底座
 
-| 能力 | 位置 | 说明 |
+| 能力 | 位置 | 与新方案的关系 |
 | --- | --- | --- |
-| OpenAI 兼容流式请求 | `feature/ai/src/commonMain/kotlin/com/github/zly2006/zhihu/ai/CustomAi.kt` | `streamChatCompletion` 返回 `Flow<String>`，支持 `[DONE]` 和非流式兜底 |
-| 接口配置 | `CustomAiConfigDialog.kt` | 地址、API Key、模型和连接测试 |
-| 配置持久化 | `CustomAiConfigFile` + `custom_ai.json` | 不进 WebDAV 同步，也不进 Android 云备份 |
-| 文章总结 | `shared/.../viewmodel/ArticleViewModel.kt`、`ui/article/ArticleSheets.kt` | 知乎直答与自定义模型二选一 |
-| 总结入口 | `shared/.../ui/article/ArticleActionsMenu.kt` | 「更多」菜单中的「总结本文」 |
-| 流式 Markdown | `third_party/markdown/markdown-renderer/.../Markdown.kt`、`MarkdownStreaming.kt` | `Markdown(isStreaming = true)` 与 `MarkdownConfig.LlmStreaming` |
-| 多平台 HTTP 引擎 | `core/account/.../AccountHttpClientEngine.*.kt` | Android OkHttp、JVM CIO、Native Darwin |
-| 依赖注入 | `core/account/.../AccountModule.kt` | `HttpClientEngine` 由 Koin 提供 |
-| 数据库 | `core/database/...` | Room 已在 Android、JVM、Native 注册 |
+| OpenAI 兼容流式请求 | `feature/ai/src/commonMain/kotlin/com/github/zly2006/zhihu/ai/CustomAi.kt` | 保留既有总结调用；Pi 会话由 `pi-ai` 负责模型请求，不叠加第二套执行循环 |
+| 接口配置 | `CustomAiConfigDialog.kt`、`CustomAiConfigFile` | 复用配置入口；需验证现有地址、密钥、模型到 Pi provider 配置的映射 |
+| 配置持久化 | `custom_ai.json` | 已排除 WebDAV 和 Android 云备份，但仍是明文；不能宣称 Pi 会自动解决密钥存储问题 |
+| 文章总结 | `ArticleViewModel.kt`、`ArticleSheets.kt`、`ArticleActionsMenu.kt` | 保留知乎直答与自定义模型的既有选择 |
+| 流式 Markdown | 内置 `markdown-renderer` | 复用渲染能力，仍须遵守模块依赖边界 |
+| 依赖注入 | Koin | 应用侧运行时管理对象与会话所有者由组合根持有和关闭 |
 
-## 缺失能力
+## Pi 核心提供什么
 
-- 通用聊天页面、消息气泡和输入框。
-- 多轮会话状态、上下文拼装、token 预算和截断。
-- 会话与消息持久化；当前没有聊天表，也没有通用数据库。
-- AI 设置页与设置搜索入口；现在只有文章页内的配置对话框。
-- 全局入口；现在只能从文章「总结本文」进入。
-- 选中文本回调；正文渲染器只暴露 `enableSelection`，没有 `onSelectionChange`。
+本次查到的包名为 `@earendil-works/pi-agent-core`，版本为 `1.5.0`，依赖同版本的 `@earendil-works/pi-ai` 和 `@earendil-works/pi-schema`；核心包声明 Node.js `>=22.19.0`。这些是本次查证的快照，尚未成为项目依赖。
 
-## 关键约束
-
-1. **模块边界**：`feature:*` 不能依赖 `shared` 或另一个 feature。聊天页放在 `feature:ai` 时，需要通过参数和 Koin 取得引擎、配置与导航回调；放在 `shared` 则不受此限制。
-2. **渲染器依赖**：`core:markdown` 用 `implementation` 引入 `markdown-renderer`，`shared` 不能直接使用 `Markdown`。需要新增直接依赖，或在 `core:markdown` 增加流式包装。
-3. **选中文本**：内置渲染器不提供选中回调。划词提问可以先接现有划线弹层；任意选区需要改造内置渲染器。
-4. **密钥存储**：`custom_ai.json` 是明文，虽然排除在备份和 WebDAV 之外，但没有加密。
-5. **体积**：云端方案几乎不增加安装包；端侧模型会与 Lite 目标冲突。
-6. **接口稳定性**：知乎直答 `ai_ingress` 是非公开接口。聊天不应建立在该接口上，只保留现有总结用途。
-
-## 分档与工作量
-
-估算按熟悉该仓库的开发者计算，包含四平台验证与 review，不包含产品设计和 Prompt 调优。
-
-| 档位 | 范围 | 估算 |
+| 能力 | Pi 提供 | 应用仍需负责 |
 | --- | --- | --- |
-| A 文章内问答 | 单轮或短多轮，围绕当前文章，不存历史 | 2-4 人日 |
-| B 全局助手 | 独立聊天页、多轮会话、本地历史、设置页 | 8-12 人日 |
-| C 深度集成 | 划词提问、评论代写、工具调用、内容跳转 | 15-20 人日 |
-| D 端侧模型 | 内置小模型或本地推理 | 30 人日以上 |
+| Agent 循环 | 模型请求、工具调用、结果回填与后续生成 | 定义阅读任务及允许调用的工具 |
+| 流式输出 | 消息增量、工具进度、运行状态事件 | 转换为 Compose 可观察状态并呈现 |
+| 工具执行 | 参数校验、执行前后扩展点、并发/串行调度 | 参数之外的权限校验、执行实现与副作用确认 |
+| 运行控制 | 取消、继续、steering 与 follow-up 队列 | 切换文章、收起面板、退出账号时的生命周期 |
+| 模型接入 | `pi-ai` 的多提供方接口 | 支持范围、配置映射与实际服务兼容性验证 |
+| 上下文 | 上下文转换等扩展点 | token 预算、超长正文提示与压缩策略 |
+| 会话 | 运行中的消息和 agent 状态 | 多会话隔离、持久化、恢复与存储版本管理 |
 
-## 推荐 MVP
+`sessionId` 不等于历史数据库；核心的上下文扩展点也不等于已经内置符合产品要求的自动压缩。不能把这些能力直接列为已完成。
 
-1. 会话模型先用 JSON 文件，字段包含角色、内容和时间；稳定后再迁 Room。
-2. `AiChatViewModel` 持有消息列表、加载状态和 `Job`；离开页面时取消请求。
-3. 聊天页复用 `Markdown(isStreaming = true)` 和现有输入框、剪贴板组件。
-4. 在文章操作菜单加入「问问 AI」，携带 `articleId` 和标题。
-5. 把配置对话框升级为设置项，补 `commonTest` 和 AVD 截图。
+Pi 采用 MIT 许可。内置分发时保留版权和许可声明，并分别审计依赖及运行时的分发许可。
 
-## 涉及文件
+## 最小数据流与状态归属
 
-- 路由：`core/navigation/src/commonMain/kotlin/com/github/zly2006/zhihu/navigation/NavDestination.kt`
-- 宿主注册：`shared/src/commonMain/kotlin/com/github/zly2006/zhihu/ui/ZhihuMain.kt`
-- 设置入口：`shared/src/commonMain/kotlin/com/github/zly2006/zhihu/ui/AccountSettingScreen.kt`
-- 网络：`feature/ai/src/commonMain/kotlin/com/github/zly2006/zhihu/ai/CustomAi.kt`
-- 会话存储：`core/database` 新数据库，并在三个 `DatabaseModule` 注册
+```text
+Compose 文章页 / AI 面板
+    ↕ 提问、正文或选段、取消 / 消息与工具事件
+应用侧会话所有者与运行时管理
+    ↕ 带会话和请求标识的进程通信
+随桌面应用打包的后台进程
+    ↕
+pi-agent-core → pi-ai → 用户配置的模型服务
+    ↕ 工具调用 / 结果
+应用提供的有限阅读工具
+```
 
-## 验收
+- 应用侧会话所有者按账号、内容类型和内容 ID 隔离会话，生命周期长于面板组合；Compose 持有展示、输入草稿和滚动状态。
+- Pi 会话负责当前执行历史和工具循环。Kotlin 侧显示其事件投影，不独立改写第二份执行历史；恢复会话时由明确的完整快照初始化。
+- 第一版会话仅保留在应用运行期间，不增加聊天表、DAO 或 JSON 历史文件。跨重启历史作为后续独立阶段，届时再确定唯一存储所有者、格式和迁移策略。
+- 进程通信必须能区分会话和本次生成，覆盖开始、增量、工具请求、工具结果、结束、失败和取消。切换内容或账号后，旧事件不能写入新会话。
+- 切换文章或收起助手时停止生成并保留已生成内容；退出账号时关闭该账号会话并清理相关凭据。后台进程崩溃须显示明确失败，不自动重放可能带副作用的工具。
+- 应用提供已加载正文及用户选择的引用，不把知乎账号凭据交给后台模型运行时。模型密钥按需提供，不写入命令行参数或日志；具体传递与存储方式在原型阶段验证。
 
-- 两个 flavor 分别构建。
-- `./gradlew jvmUnitTests` 与 `:feature:ai` 的 `commonTest`。
-- `./gradlew ktlintFormat` 与 detekt。
-- Android AVD 真实页面与截图。
-- Desktop、macOS、iOS 至少各启动一次。
-- 按仓库要求完成 review 后再提交。
+首个验证工具仅读取当前文章快照，用于证明工具循环与应用桥接可用；是否在正式发送流程使用该工具，按正文是否已经随请求传入决定，避免重复注入。首版不开放 shell、任意文件访问、发布、点赞或关注等工具。
+
+| 用户动作 | 请求预算 |
+| --- | --- |
+| 打开、切换文章或展开助手 | 0 次模型请求，不额外请求知乎详情 |
+| 提交问题、总结或明确重试 | 启动 1 次 agent 任务；无工具续跑时通常为 1 次模型请求 |
+| 模型调用阅读工具 | 读取本地已加载快照；结果回填可能产生后续模型请求 |
+| 停止或收起助手 | 取消当前任务，不启动新请求 |
+
+一次 agent 任务不等于一次 HTTP 请求。实现时须设置工具回合和 token/费用预算，并验证达到上限时能停止；具体阈值由真实文章样本确定，不在文档里猜定。正文过长时明确提示引用范围，不能静默截断或把摘要冒充全文。
+
+## 平台与模块边界
+
+桌面 JVM 是首个验证目标；其进程启动方式不能直接视为 macOS Kotlin/Native 已接通。原生 macOS 要单独验证进程宿主、签名、资源路径、退出清理与分发包。
+
+Android/iOS 不能直接引用 TypeScript 包。`pi-ai` 声明浏览器支持并不足以证明 Android/iOS 原生兼容，OAuth 和部分 provider 还依赖 Node 环境。设备内嵌 JS 引擎需另行验证依赖、流式网络、取消、包体积和平台桥接；服务端运行 Pi 则会改变部署与正文隐私边界。两条路线均不纳入本次默认实现。
+
+- `feature:*` 不能依赖 `shared` 或另一个 feature。平台运行时与公共会话契约须按完整能力设计，不能逐个添加无关回调或全局可变 factory。
+- `shared` 当前不能直接使用底层 `Markdown`；选择渲染接入位置前核对真实依赖，不新增只转发参数的包装层。
+- 新阅读交互只接 Compose Markdown，不更新废弃的 WebView 正文路径。
+- 任意正文选区回调尚需单独改造，第一版先支持已加载全文问答；不能因为引入 Pi 就把选区能力视为已有。
+- 知乎直答 `ai_ingress` 仍只用于既有总结，不当作多轮聊天后端。
+- 先验证现有 OpenAI 兼容服务配置；能接入 Claude 模型不代表复用了 Claude Code 内核，也不默认复用 Claude 订阅登录凭据。
+
+## 实施阶段与工作量
+
+以下是单人熟悉仓库、使用常规模型 API 的工程估算，不是已经验证的工期。
+
+1. **桌面执行原型，约 2–5 个工作日**：固定 Pi 版本，跑通应用启动后台进程、流式提问、一个只读文章工具、取消和退出；验证用户无需安装额外程序。先证明真实打包运行可行，再扩展 UI。
+2. **桌面可交付 MVP，累计约 2–4 周**：接入 Compose 面板、配置、账号与文章隔离、运行期草稿与对话恢复、错误处理、预算限制及分发验证。多桌面平台的打包问题可能扩大范围。
+3. **后续独立阶段，另行估算**：跨重启历史、通用独立聊天页、任意选区提问、更多阅读工具，以及 Android/iOS 执行面。
+
+第一阶段不承诺完整 coding agent、MCP、subagent、联网搜索或跨文章知识库。每项新增能力必须对应已确认的阅读行为，不能仅因上游提供就默认接入。
+
+## 验收与实施门槛
+
+- 在未安装 Claude/Pi CLI、未配置全局 Node 的环境验证桌面分发包可启动后台核心，正确加载依赖并完成实际模型调用。
+- 验证流式文字、只读工具调用与结果回填；记录一次任务的模型请求次数，证明预算限制有效。
+- A 文章提问后切到 B，再回 A，消息、草稿与滚动位置归属正确；旧响应不能串入其他文章或账号。
+- 验证生成中取消、工具执行中取消、网络失败、后台进程异常退出和应用退出清理。
+- 验证日志及启动参数不含模型密钥或知乎凭据；正文发送范围与用户操作一致。
+- 保存实际目标页面的最终截图；接入三栏后同时验证展开、收起和窄窗口状态。
+- 按仓库要求先构建再格式化，按改动范围运行单元测试、模块图、ABI 和 detekt 检查；Android 既有总结能力须覆盖必要回归，实际修改 Android UI 时执行 AVD 验证。
+- 完成代码 review 并获得批准后再提交。内置运行时与依赖随发布打包，不把本地编译产物或 Maven 仓库提交到源码。
+
+## 查证来源
+
+- [Pi 仓库](https://github.com/badlogic/pi-mono)
+- [Agent 核心说明](https://github.com/badlogic/pi-mono/blob/main/packages/agent/README.md)
+- [Agent 包元数据](https://github.com/badlogic/pi-mono/blob/main/packages/agent/package.json)
+- [模型接入层说明](https://github.com/badlogic/pi-mono/blob/main/packages/ai/README.md)
+- [MIT 许可证](https://github.com/badlogic/pi-mono/blob/main/LICENSE)
+
+以上链接跟随上游 main；实施记录必须补充固定版本或 commit，以及实际测试的平台与 provider。
