@@ -15,7 +15,8 @@ public final class com/github/zly2006/zhihu/markdown/ComposableSingletons$Render
 public final class com/github/zly2006/zhihu/markdown/ComposableSingletons$SegmentHighlightKt {
 	public static final field INSTANCE Lcom/github/zly2006/zhihu/markdown/ComposableSingletons$SegmentHighlightKt;
 	public fun <init> ()V
-	public final fun getLambda$-1738073678$Zhihu_Hyperion_core_markdown ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda$1966396995$Zhihu_Hyperion_core_markdown ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda$712069886$Zhihu_Hyperion_core_markdown ()Lkotlin/jvm/functions/Function2;
 }
 
 public final class com/github/zly2006/zhihu/markdown/DownloadedFonts {
@@ -81,14 +82,15 @@ public final class com/github/zly2006/zhihu/markdown/MdAstKt {
 
 public final class com/github/zly2006/zhihu/markdown/RenderMarkdownKt {
 	public static final fun RenderImage (Lcom/hrm/markdown/renderer/MarkdownImageData;Landroidx/compose/ui/Modifier;Ljava/util/List;Landroidx/compose/runtime/Composer;II)V
-	public static final fun RenderMarkdown (Ljava/lang/String;Landroidx/compose/ui/Modifier;Landroidx/compose/foundation/ScrollState;ZZLkotlin/jvm/functions/Function2;Lkotlin/jvm/functions/Function2;ZLandroidx/compose/runtime/Composer;II)V
-	public static final fun RenderMarkdownText (Ljava/lang/String;Landroidx/compose/ui/Modifier;Landroidx/compose/foundation/ScrollState;ZZLkotlin/jvm/functions/Function2;Lkotlin/jvm/functions/Function2;ZLandroidx/compose/runtime/Composer;II)V
+	public static final fun RenderMarkdown (Ljava/lang/String;Landroidx/compose/ui/Modifier;Landroidx/compose/foundation/ScrollState;ZZLkotlin/jvm/functions/Function2;Lkotlin/jvm/functions/Function2;ZZLandroidx/compose/runtime/Composer;II)V
+	public static final fun RenderMarkdownText (Ljava/lang/String;Landroidx/compose/ui/Modifier;Landroidx/compose/foundation/ScrollState;ZZLkotlin/jvm/functions/Function2;Lkotlin/jvm/functions/Function2;ZZLandroidx/compose/runtime/Composer;II)V
 	public static final fun RenderVideoBox (JLjava/lang/String;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
 
 public final class com/github/zly2006/zhihu/markdown/SegmentHighlightKt {
 	public static final fun buildSegmentLikeBody (Lcom/github/zly2006/zhihu/util/SegmentHighlightSpan;)Ljava/lang/String;
 	public static final fun buildSegmentUnlikeBody (Lcom/github/zly2006/zhihu/util/SegmentHighlightSpan;)Ljava/lang/String;
+	public static final fun getLocalSegmentAskAi ()Landroidx/compose/runtime/ProvidableCompositionLocal;
 	public static final fun getLocalSegmentCommentSheet ()Landroidx/compose/runtime/ProvidableCompositionLocal;
 	public static final fun updateSegmentMetaAfterLike (Lcom/github/zly2006/zhihu/util/SegmentHighlightSpan;Lkotlinx/serialization/json/JsonObject;)Lcom/github/zly2006/zhihu/data/SegmentInfoMeta;
 	public static final fun updateSegmentMetaAfterUnlike (Lcom/github/zly2006/zhihu/util/SegmentHighlightSpan;)Lcom/github/zly2006/zhihu/data/SegmentInfoMeta;

@@ -262,6 +262,18 @@ data class CommentHolder(
     val article: NavDestination,
 ) : NavDestination
 
+/**
+ * 窄窗口下承载 AI 阅读助手的独立对话页。
+ *
+ * 会话本身按 [contentKey] 持有在外壳里，这里只记录“问的是哪篇内容”和展示标题，
+ * 进程重启后正文与会话都不存在，页面会提示内容已关闭。
+ */
+@Serializable
+data class AiChat(
+    val contentKey: String = "",
+    val title: String = "",
+) : NavDestination
+
 @Serializable
 data class SegmentCommentHolder(
     val contentId: String,

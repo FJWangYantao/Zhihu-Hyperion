@@ -49,6 +49,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -114,6 +115,7 @@ import com.github.zly2006.zhihu.glass.isLiquidGlassSupported
 import com.github.zly2006.zhihu.glass.rememberGlassBackdrop
 import com.github.zly2006.zhihu.icons.AppIcons
 import com.github.zly2006.zhihu.icons.Icon
+import com.github.zly2006.zhihu.markdown.LocalSegmentAskAi
 import com.github.zly2006.zhihu.markdown.RenderMarkdown
 import com.github.zly2006.zhihu.navigation.Article
 import com.github.zly2006.zhihu.navigation.ArticleType
@@ -150,6 +152,7 @@ import com.github.zly2006.zhihu.ui.article.rememberArticleBottomBarState
 import com.github.zly2006.zhihu.ui.article.rememberArticleTopBarState
 import com.github.zly2006.zhihu.ui.article.rememberBottomBarAvoidingBringIntoViewSpec
 import com.github.zly2006.zhihu.ui.article.voteUpNeutralContentDuo3
+import com.github.zly2006.zhihu.ui.assistant.LocalArticleAssistant
 import com.github.zly2006.zhihu.ui.components.ANSWER_SWITCH_SENSITIVITY_PREFERENCE_KEY
 import com.github.zly2006.zhihu.ui.components.AnswerHorizontalOverscroll
 import com.github.zly2006.zhihu.ui.components.AnswerPreview
@@ -174,6 +177,7 @@ import com.github.zly2006.zhihu.ui.components.pageTurnViewportWithGuide
 import com.github.zly2006.zhihu.ui.components.rememberObservedSetting
 import com.github.zly2006.zhihu.ui.components.rememberPageTurnTarget
 import com.github.zly2006.zhihu.ui.components.rememberPreferCollapsedExitUntilCollapsedScrollBehavior
+import com.github.zly2006.zhihu.util.SegmentHighlightSpan
 import com.github.zly2006.zhihu.util.formatCompactCount
 import com.github.zly2006.zhihu.util.smoothGradient
 import com.github.zly2006.zhihu.viewmodel.AigcVoteService
@@ -215,6 +219,7 @@ fun ArticleScreen(
     viewModel: ArticleViewModel,
 ) {
     val navigator = LocalNavigator.current
+    val assistant = LocalArticleAssistant.current
     val readingPlayerOverlayPadding = LocalReadingPlayerOverlayPadding.current
     val readingPlayerOverlayOffsetState = LocalReadingPlayerOverlayOffsetState.current
     val environment = rememberZhihuApiEnvironment(allowGuestAccess = false)
@@ -305,6 +310,13 @@ fun ArticleScreen(
     var showExportDialog by remember { mutableStateOf(false) }
     var showDoubleTapActionDialog by remember { mutableStateOf(false) }
     var showVoters by rememberSaveable(article.type, article.id) { mutableStateOf(false) }
+    // 正文加载完成后把上下文交给助手；这里只做内存发布，打开面板或切换文章都不会触发请求。
+    LaunchedEffect(assistant?.key, viewModel.title, viewModel.content, viewModel.loadFailure) {
+        val handle = assistant ?: return@LaunchedEffect
+        if (viewModel.content.isNotBlank() && viewModel.loadFailure == null) {
+            handle.publishContent(viewModel.convertToMarkdown())
+        }
+    }
     val topBarState = rememberArticleTopBarState(
         scrollState = scrollState,
         autoHide = isTitleAutoHide,
@@ -649,6 +661,11 @@ fun ArticleScreen(
                                 }
                             },
                             actions = {
+                                assistant?.let { handle ->
+                                    IconButton(onClick = handle.onToggle) {
+                                        Icon(AppIcons.AutoAwesome, contentDescription = "AI 助手")
+                                    }
+                                }
                                 if (useDuo3ArticleActions) {
                                     IconButton(
                                         onClick = { showActionsMenu = true },
@@ -905,10 +922,18 @@ fun ArticleScreen(
                 }
                 return@Scaffold
             }
-            CompositionLocalProvider(LocalBringIntoViewSpec provides articleBringIntoViewSpec) {
-                Box(Modifier.glassBackdropSource(glassBackdrop)) {
+            val askAiAboutSegment: ((SegmentHighlightSpan) -> Unit)? = remember(assistant) {
+                assistant?.let { handle -> { span: SegmentHighlightSpan -> handle.askAbout(span.displayText) } }
+            }
+            CompositionLocalProvider(
+                LocalBringIntoViewSpec provides articleBringIntoViewSpec,
+                LocalSegmentAskAi provides askAiAboutSegment,
+            ) {
+                Box(Modifier.fillMaxSize().glassBackdropSource(glassBackdrop)) {
                     Column(
                         modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .widthIn(max = ReadingContentMaxWidth)
                             .padding(horizontal = 16.dp)
                             .verticalScroll(scrollState)
                             .padding(innerPadding)

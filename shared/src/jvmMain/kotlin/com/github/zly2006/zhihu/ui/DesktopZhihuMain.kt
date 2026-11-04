@@ -161,6 +161,7 @@ fun DesktopZhihuMain() {
         navigate = ::navigate,
         navigateContent = { destination, targetController -> navigate(destination, targetController) },
         enableLandscapeListDetail = true,
+        enableAssistantPane = true,
         setCurrentMainTabOpenFrom = { currentMainTabOpenFrom = it },
         consumeMainTabNavigationTarget = { destination ->
             if (mainTabNavigationTarget == destination) {

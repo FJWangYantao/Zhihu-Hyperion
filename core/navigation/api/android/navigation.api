@@ -188,6 +188,39 @@ public final class com/github/zly2006/zhihu/navigation/Account$WebDavSync : com/
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class com/github/zly2006/zhihu/navigation/AiChat : com/github/zly2006/zhihu/navigation/NavDestination {
+	public static final field $stable I
+	public static final field Companion Lcom/github/zly2006/zhihu/navigation/AiChat$Companion;
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;)Lcom/github/zly2006/zhihu/navigation/AiChat;
+	public static synthetic fun copy$default (Lcom/github/zly2006/zhihu/navigation/AiChat;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lcom/github/zly2006/zhihu/navigation/AiChat;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getContentKey ()Ljava/lang/String;
+	public final fun getTitle ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class com/github/zly2006/zhihu/navigation/AiChat$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field $stable I
+	public static final field INSTANCE Lcom/github/zly2006/zhihu/navigation/AiChat$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Lcom/github/zly2006/zhihu/navigation/AiChat;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Lcom/github/zly2006/zhihu/navigation/AiChat;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public fun typeParametersSerializers ()[Lkotlinx/serialization/KSerializer;
+}
+
+public final class com/github/zly2006/zhihu/navigation/AiChat$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
 public final class com/github/zly2006/zhihu/navigation/Article : com/github/zly2006/zhihu/navigation/NavDestination {
 	public static final field $stable I
 	public static final field Companion Lcom/github/zly2006/zhihu/navigation/Article$Companion;

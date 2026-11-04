@@ -35,6 +35,35 @@ sealed interface com.github.zly2006.zhihu.navigation/NavDestination { // com.git
     }
 }
 
+final class com.github.zly2006.zhihu.navigation/AiChat : com.github.zly2006.zhihu.navigation/NavDestination { // com.github.zly2006.zhihu.navigation/AiChat|null[0]
+    constructor <init>(kotlin/String = ..., kotlin/String = ...) // com.github.zly2006.zhihu.navigation/AiChat.<init>|<init>(kotlin.String;kotlin.String){}[0]
+
+    final val contentKey // com.github.zly2006.zhihu.navigation/AiChat.contentKey|{}contentKey[0]
+        final fun <get-contentKey>(): kotlin/String // com.github.zly2006.zhihu.navigation/AiChat.contentKey.<get-contentKey>|<get-contentKey>(){}[0]
+    final val title // com.github.zly2006.zhihu.navigation/AiChat.title|{}title[0]
+        final fun <get-title>(): kotlin/String // com.github.zly2006.zhihu.navigation/AiChat.title.<get-title>|<get-title>(){}[0]
+
+    final fun component1(): kotlin/String // com.github.zly2006.zhihu.navigation/AiChat.component1|component1(){}[0]
+    final fun component2(): kotlin/String // com.github.zly2006.zhihu.navigation/AiChat.component2|component2(){}[0]
+    final fun copy(kotlin/String = ..., kotlin/String = ...): com.github.zly2006.zhihu.navigation/AiChat // com.github.zly2006.zhihu.navigation/AiChat.copy|copy(kotlin.String;kotlin.String){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // com.github.zly2006.zhihu.navigation/AiChat.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // com.github.zly2006.zhihu.navigation/AiChat.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // com.github.zly2006.zhihu.navigation/AiChat.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<com.github.zly2006.zhihu.navigation/AiChat> { // com.github.zly2006.zhihu.navigation/AiChat.$serializer|null[0]
+        final val descriptor // com.github.zly2006.zhihu.navigation/AiChat.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // com.github.zly2006.zhihu.navigation/AiChat.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // com.github.zly2006.zhihu.navigation/AiChat.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): com.github.zly2006.zhihu.navigation/AiChat // com.github.zly2006.zhihu.navigation/AiChat.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, com.github.zly2006.zhihu.navigation/AiChat) // com.github.zly2006.zhihu.navigation/AiChat.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;com.github.zly2006.zhihu.navigation.AiChat){}[0]
+    }
+
+    final object Companion { // com.github.zly2006.zhihu.navigation/AiChat.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<com.github.zly2006.zhihu.navigation/AiChat> // com.github.zly2006.zhihu.navigation/AiChat.Companion.serializer|serializer(){}[0]
+    }
+}
+
 final class com.github.zly2006.zhihu.navigation/Article : com.github.zly2006.zhihu.navigation/NavDestination { // com.github.zly2006.zhihu.navigation/Article|null[0]
     constructor <init>(kotlin/String = ..., com.github.zly2006.zhihu.navigation/ArticleType, kotlin/Long, kotlin/String = ..., kotlin/String = ..., kotlin/String? = ..., kotlin/String? = ..., kotlin/String? = ...) // com.github.zly2006.zhihu.navigation/Article.<init>|<init>(kotlin.String;com.github.zly2006.zhihu.navigation.ArticleType;kotlin.Long;kotlin.String;kotlin.String;kotlin.String?;kotlin.String?;kotlin.String?){}[0]
 
@@ -959,6 +988,8 @@ final val com.github.zly2006.zhihu.navigation/com_github_zly2006_zhihu_navigatio
 final val com.github.zly2006.zhihu.navigation/com_github_zly2006_zhihu_navigation_Account_SystemAndUpdateSettings$stableprop // com.github.zly2006.zhihu.navigation/com_github_zly2006_zhihu_navigation_Account_SystemAndUpdateSettings$stableprop|#static{}com_github_zly2006_zhihu_navigation_Account_SystemAndUpdateSettings$stableprop[0]
 final val com.github.zly2006.zhihu.navigation/com_github_zly2006_zhihu_navigation_Account_SystemAndUpdateSettings_$serializer$stableprop // com.github.zly2006.zhihu.navigation/com_github_zly2006_zhihu_navigation_Account_SystemAndUpdateSettings_$serializer$stableprop|#static{}com_github_zly2006_zhihu_navigation_Account_SystemAndUpdateSettings_$serializer$stableprop[0]
 final val com.github.zly2006.zhihu.navigation/com_github_zly2006_zhihu_navigation_Account_WebDavSync$stableprop // com.github.zly2006.zhihu.navigation/com_github_zly2006_zhihu_navigation_Account_WebDavSync$stableprop|#static{}com_github_zly2006_zhihu_navigation_Account_WebDavSync$stableprop[0]
+final val com.github.zly2006.zhihu.navigation/com_github_zly2006_zhihu_navigation_AiChat$stableprop // com.github.zly2006.zhihu.navigation/com_github_zly2006_zhihu_navigation_AiChat$stableprop|#static{}com_github_zly2006_zhihu_navigation_AiChat$stableprop[0]
+final val com.github.zly2006.zhihu.navigation/com_github_zly2006_zhihu_navigation_AiChat_$serializer$stableprop // com.github.zly2006.zhihu.navigation/com_github_zly2006_zhihu_navigation_AiChat_$serializer$stableprop|#static{}com_github_zly2006_zhihu_navigation_AiChat_$serializer$stableprop[0]
 final val com.github.zly2006.zhihu.navigation/com_github_zly2006_zhihu_navigation_Article$stableprop // com.github.zly2006.zhihu.navigation/com_github_zly2006_zhihu_navigation_Article$stableprop|#static{}com_github_zly2006_zhihu_navigation_Article$stableprop[0]
 final val com.github.zly2006.zhihu.navigation/com_github_zly2006_zhihu_navigation_ArticleTypeNavType$stableprop // com.github.zly2006.zhihu.navigation/com_github_zly2006_zhihu_navigation_ArticleTypeNavType$stableprop|#static{}com_github_zly2006_zhihu_navigation_ArticleTypeNavType$stableprop[0]
 final val com.github.zly2006.zhihu.navigation/com_github_zly2006_zhihu_navigation_Article_$serializer$stableprop // com.github.zly2006.zhihu.navigation/com_github_zly2006_zhihu_navigation_Article_$serializer$stableprop|#static{}com_github_zly2006_zhihu_navigation_Article_$serializer$stableprop[0]
@@ -1029,6 +1060,8 @@ final fun com.github.zly2006.zhihu.navigation/com_github_zly2006_zhihu_navigatio
 final fun com.github.zly2006.zhihu.navigation/com_github_zly2006_zhihu_navigation_Account_SystemAndUpdateSettings$stableprop_getter(): kotlin/Int // com.github.zly2006.zhihu.navigation/com_github_zly2006_zhihu_navigation_Account_SystemAndUpdateSettings$stableprop_getter|com_github_zly2006_zhihu_navigation_Account_SystemAndUpdateSettings$stableprop_getter(){}[0]
 final fun com.github.zly2006.zhihu.navigation/com_github_zly2006_zhihu_navigation_Account_SystemAndUpdateSettings_$serializer$stableprop_getter(): kotlin/Int // com.github.zly2006.zhihu.navigation/com_github_zly2006_zhihu_navigation_Account_SystemAndUpdateSettings_$serializer$stableprop_getter|com_github_zly2006_zhihu_navigation_Account_SystemAndUpdateSettings_$serializer$stableprop_getter(){}[0]
 final fun com.github.zly2006.zhihu.navigation/com_github_zly2006_zhihu_navigation_Account_WebDavSync$stableprop_getter(): kotlin/Int // com.github.zly2006.zhihu.navigation/com_github_zly2006_zhihu_navigation_Account_WebDavSync$stableprop_getter|com_github_zly2006_zhihu_navigation_Account_WebDavSync$stableprop_getter(){}[0]
+final fun com.github.zly2006.zhihu.navigation/com_github_zly2006_zhihu_navigation_AiChat$stableprop_getter(): kotlin/Int // com.github.zly2006.zhihu.navigation/com_github_zly2006_zhihu_navigation_AiChat$stableprop_getter|com_github_zly2006_zhihu_navigation_AiChat$stableprop_getter(){}[0]
+final fun com.github.zly2006.zhihu.navigation/com_github_zly2006_zhihu_navigation_AiChat_$serializer$stableprop_getter(): kotlin/Int // com.github.zly2006.zhihu.navigation/com_github_zly2006_zhihu_navigation_AiChat_$serializer$stableprop_getter|com_github_zly2006_zhihu_navigation_AiChat_$serializer$stableprop_getter(){}[0]
 final fun com.github.zly2006.zhihu.navigation/com_github_zly2006_zhihu_navigation_Article$stableprop_getter(): kotlin/Int // com.github.zly2006.zhihu.navigation/com_github_zly2006_zhihu_navigation_Article$stableprop_getter|com_github_zly2006_zhihu_navigation_Article$stableprop_getter(){}[0]
 final fun com.github.zly2006.zhihu.navigation/com_github_zly2006_zhihu_navigation_ArticleTypeNavType$stableprop_getter(): kotlin/Int // com.github.zly2006.zhihu.navigation/com_github_zly2006_zhihu_navigation_ArticleTypeNavType$stableprop_getter|com_github_zly2006_zhihu_navigation_ArticleTypeNavType$stableprop_getter(){}[0]
 final fun com.github.zly2006.zhihu.navigation/com_github_zly2006_zhihu_navigation_Article_$serializer$stableprop_getter(): kotlin/Int // com.github.zly2006.zhihu.navigation/com_github_zly2006_zhihu_navigation_Article_$serializer$stableprop_getter|com_github_zly2006_zhihu_navigation_Article_$serializer$stableprop_getter(){}[0]

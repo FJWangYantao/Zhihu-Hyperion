@@ -35,7 +35,9 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -114,6 +116,7 @@ import androidx.navigation.toRoute
 import androidx.navigationevent.NavigationEventTransitionState
 import androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner
 import com.github.zly2006.zhihu.account.LoginScreen
+import com.github.zly2006.zhihu.ai.CustomAiConfigFile
 import com.github.zly2006.zhihu.filter.ContentOpenFrom
 import com.github.zly2006.zhihu.glass.LIQUID_GLASS_PREFERENCE_KEY
 import com.github.zly2006.zhihu.glass.LiquidGlassTab
@@ -127,6 +130,7 @@ import com.github.zly2006.zhihu.icons.AppIcons
 import com.github.zly2006.zhihu.icons.Icon
 import com.github.zly2006.zhihu.markdown.LocalSegmentCommentSheet
 import com.github.zly2006.zhihu.navigation.Account
+import com.github.zly2006.zhihu.navigation.AiChat
 import com.github.zly2006.zhihu.navigation.Article
 import com.github.zly2006.zhihu.navigation.ArticleType
 import com.github.zly2006.zhihu.navigation.ArticleTypeNavType
@@ -167,6 +171,11 @@ import com.github.zly2006.zhihu.reading.ReadingPlayerBar
 import com.github.zly2006.zhihu.reading.ReadingQueueSheet
 import com.github.zly2006.zhihu.reading.rememberReadingPlayerController
 import com.github.zly2006.zhihu.reading.saveReadingPlaybackSpeed
+import com.github.zly2006.zhihu.ui.assistant.ArticleAssistantHandle
+import com.github.zly2006.zhihu.ui.assistant.ArticleAssistantState
+import com.github.zly2006.zhihu.ui.assistant.AssistantPage
+import com.github.zly2006.zhihu.ui.assistant.AssistantPane
+import com.github.zly2006.zhihu.ui.assistant.LocalArticleAssistant
 import com.github.zly2006.zhihu.ui.components.AppDialogHost
 import com.github.zly2006.zhihu.ui.components.LocalSelectedContentDestination
 import com.github.zly2006.zhihu.ui.components.NoOpPagerNestedScrollConnection
@@ -187,6 +196,7 @@ import com.github.zly2006.zhihu.ui.subscreens.TOP_LEVEL_BACK_TO_LAUNCHER_PREFERE
 import com.github.zly2006.zhihu.ui.subscreens.WebDavSyncScreen
 import com.github.zly2006.zhihu.update.UpdateOnLaunch
 import com.github.zly2006.zhihu.video.VideoScreen
+import io.ktor.client.engine.HttpClientEngine
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -194,6 +204,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
+import kotlin.math.roundToInt
 import kotlin.reflect.KClass
 import kotlin.reflect.typeOf
 
@@ -266,6 +277,8 @@ fun ZhihuMain(
     navigateContent: (NavDestination, NavHostController) -> Unit = { destination, _ -> navigate(destination) },
     enableLandscapeListDetail: Boolean = false,
     isListDetailCapable: Boolean = true,
+    /** 是否在文章阅读界面提供 AI 助手；只有桌面 JVM 启用，其他平台保持现状。 */
+    enableAssistantPane: Boolean = false,
     setCurrentMainTabOpenFrom: (String?) -> Unit,
     consumeMainTabNavigationTarget: (TopLevelDestination) -> Unit,
     preferenceState: ZhihuMainPreferenceState,
@@ -368,6 +381,59 @@ fun ZhihuMain(
         }
     }
     val hasOpenDetail = showDetailPane && selectedContentDestination != null
+    // 阅读助手的会话挂在主壳上：三栏、抽屉和独立对话页展示的是同一份按内容隔离的会话。
+    val assistantScope = rememberCoroutineScope()
+    val assistantEngine = koinInject<HttpClientEngine>()
+    val assistantConfigFile = koinInject<CustomAiConfigFile>()
+    val assistantState = remember(assistantScope, assistantEngine, assistantConfigFile) {
+        ArticleAssistantState(assistantScope, assistantEngine, assistantConfigFile)
+    }
+    val readingDestination = if (hasOpenDetail) selectedContentDestination else navEntry.readingDestinationOrNull()
+    val assistantArticle = readingDestination as? Article
+    val assistantTitle = assistantArticle?.title.orEmpty()
+    val assistantKey = assistantArticle?.takeIf { enableAssistantPane }?.let {
+        "${accountState.value.id.ifBlank { "guest" }}:${it.type}:${it.id}"
+    }
+    var assistantOpen by rememberObservedSetting(settings, ASSISTANT_PANE_OPEN_KEY) {
+        getBoolean(ASSISTANT_PANE_OPEN_KEY, false)
+    }
+
+    fun setAssistantOpen(open: Boolean) {
+        // rememberObservedSetting 只给出可观察状态，切换时必须同时写回设置，否则重启后不保留。
+        assistantOpen = open
+        settings.putBoolean(ASSISTANT_PANE_OPEN_KEY, open)
+    }
+    val openAssistant: () -> Unit = {
+        val key = assistantKey
+        if (key != null) {
+            // 双栏时用右侧抽屉，单栏时打开独立对话页，避免遮住正文。
+            if (showListDetail) {
+                setAssistantOpen(true)
+            } else {
+                navController.navigate(AiChat(contentKey = key, title = assistantTitle))
+            }
+        }
+    }
+    val toggleAssistant: () -> Unit = { if (assistantOpen) setAssistantOpen(false) else openAssistant() }
+    val currentToggleAssistant by rememberUpdatedState(toggleAssistant)
+    val askAssistantAbout: (String) -> Unit = { quote ->
+        assistantKey?.let { key ->
+            assistantState.setQuote(key, quote)
+            openAssistant()
+        }
+    }
+    val currentAskAssistantAbout by rememberUpdatedState(askAssistantAbout)
+    val assistantHandle = remember(assistantKey, assistantOpen, assistantTitle) {
+        assistantKey?.let { key ->
+            ArticleAssistantHandle(
+                key = key,
+                isOpen = assistantOpen,
+                onToggle = { currentToggleAssistant() },
+                publishContent = { markdown -> assistantState.publishContent(key, markdown) },
+                askAbout = { quote -> currentAskAssistantAbout(quote) },
+            )
+        }
+    }
     val useSecondaryContentNavigation = enableLandscapeListDetail && isListPaneContext
     val detailPaneTransition = updateTransition(showListDetail || showDetailPane, label = "detail_pane_visibility")
     val detailPaneProgress by detailPaneTransition.animateFloat(transitionSpec = { motion.slowSpatialSpec() }, label = "detail_pane_progress") {
@@ -611,6 +677,11 @@ fun ZhihuMain(
             settings.getFloat(LANDSCAPE_LIST_PANE_RATIO_KEY, DEFAULT_LIST_PANE_RATIO),
         )
     }
+    var assistantWidth by remember {
+        mutableFloatStateOf(
+            settings.getInt(ASSISTANT_PANE_WIDTH_KEY, DEFAULT_ASSISTANT_PANE_WIDTH.value.toInt()).toFloat(),
+        )
+    }
 
     @Composable
     fun DetailPane(modifier: Modifier) {
@@ -632,6 +703,7 @@ fun ZhihuMain(
             LocalSelectedContentDestination provides selectedContentDestination,
             LocalReadingPlayerOverlayPadding provides readingPlayerOverlayPadding,
             LocalReadingPlayerOverlayOffsetState provides readingPlayerOverlayOffsetState,
+            LocalArticleAssistant provides assistantHandle,
         ) {
             NavHost(
                 navController = detailNavController,
@@ -727,8 +799,14 @@ fun ZhihuMain(
             }
         }
         Box(Modifier.fillMaxSize().padding(start = if (showNavigationRail) navigationRailWidth else 0.dp)) {
+            // 助手展开且宽度足够时并排成第三栏；放不下就退回双栏 + 抽屉，不把正文压到最小宽度以下。
+            val threePane = if (assistantOpen && assistantKey != null && showDetailPane) {
+                threePaneWidths(contentWidth, listPaneRatio, assistantWidth.dp)
+            } else {
+                null
+            }
             val listPaneWidth = if (showListDetail) {
-                normalizedListPaneWidth(contentWidth, listPaneRatio)
+                threePane?.listPane ?: normalizedListPaneWidth(contentWidth, listPaneRatio)
             } else {
                 contentWidth
             }
@@ -867,6 +945,7 @@ fun ZhihuMain(
                             LocalReadingPlayerOverlayPadding provides readingPlayerOverlayPadding,
                             LocalReadingPlayerOverlayOffsetState provides readingPlayerOverlayOffsetState,
                             LocalSelectedContentDestination provides selectedContentDestination,
+                            LocalArticleAssistant provides assistantHandle,
                         ) {
                             NavHost(
                                 navController,
@@ -1061,6 +1140,14 @@ fun ZhihuMain(
                                 composable<SentenceSimilarityTest> {
                                     sentenceSimilarityContent()
                                 }
+                                composable<AiChat> { entry ->
+                                    val chat: AiChat = entry.toRoute()
+                                    AssistantPage(
+                                        contentKey = chat.contentKey,
+                                        title = chat.title,
+                                        state = assistantState,
+                                    )
+                                }
                             }
                         }
                     }
@@ -1069,6 +1156,8 @@ fun ZhihuMain(
 
             if (detailPaneTransition.currentState || detailPaneTransition.targetState || detailPaneTransition.isRunning || detailEntry == null) {
                 paneStateHolder.SaveableStateProvider("detail") {
+                    // 拖动换算的分母与 normalizedListPaneWidth 一致；三栏时多出来的助手宽度只削减可拖范围。
+                    val listPaneUsableWidth = contentWidth - LIST_DETAIL_DIVIDER_WIDTH
                     // 尺寸变化只调整同一宿主的布局；隐藏时保存整个导航子树，独立弹窗也随页面离开组合。
                     Row(
                         (if (detailEntry != null) Modifier.fillMaxSize() else Modifier.size(0.dp)).graphicsLayer {
@@ -1080,9 +1169,7 @@ fun ZhihuMain(
                             Spacer(Modifier.width(listPaneWidth))
                             ListDetailDivider(
                                 onDrag = { deltaPx ->
-                                    val usableWidthPx = with(density) {
-                                        (contentWidth - LIST_DETAIL_DIVIDER_WIDTH).toPx()
-                                    }
+                                    val usableWidthPx = with(density) { listPaneUsableWidth.toPx() }
                                     if (usableWidthPx > 0f) {
                                         listPaneRatio = (listPaneRatio + deltaPx / usableWidthPx).coerceIn(0f, 1f)
                                     }
@@ -1091,14 +1178,48 @@ fun ZhihuMain(
                                     listPaneRatio = (listPaneRatio + ratioDelta).coerceIn(0f, 1f)
                                 },
                                 onDragStopped = {
-                                    val normalizedWidth = normalizedListPaneWidth(contentWidth, listPaneRatio)
-                                    listPaneRatio = normalizedWidth.value /
-                                        (contentWidth - LIST_DETAIL_DIVIDER_WIDTH).value
+                                    val normalizedWidth = threePane?.listPane
+                                        ?: normalizedListPaneWidth(contentWidth, listPaneRatio)
+                                    listPaneRatio = normalizedWidth.value / listPaneUsableWidth.value
                                     settings.putFloat(LANDSCAPE_LIST_PANE_RATIO_KEY, listPaneRatio)
                                 },
                             )
                         }
                         DetailPane(Modifier.weight(1f).fillMaxSize())
+                        if (threePane != null) {
+                            val key = assistantKey
+                            if (key != null) {
+                                ListDetailDivider(
+                                    testTag = "assistant_divider",
+                                    contentDescription = "调整 AI 助手宽度",
+                                    increaseActionLabel = "加宽 AI 助手",
+                                    decreaseActionLabel = "缩窄 AI 助手",
+                                    onDrag = { deltaPx ->
+                                        // 助手栏在正文右侧，向左拖动才是增宽；归一化后写回，避免正文被压到最小宽度以下。
+                                        val requested = assistantWidth.dp - with(density) { deltaPx.toDp() }
+                                        threePaneWidths(contentWidth, listPaneRatio, requested)?.let {
+                                            assistantWidth = it.assistantPane.value
+                                        }
+                                    },
+                                    onAdjustBy = { ratioDelta ->
+                                        val requested = (assistantWidth + contentWidth.value * ratioDelta).dp
+                                        threePaneWidths(contentWidth, listPaneRatio, requested)?.let {
+                                            assistantWidth = it.assistantPane.value
+                                        }
+                                    },
+                                    onDragStopped = {
+                                        settings.putInt(ASSISTANT_PANE_WIDTH_KEY, assistantWidth.roundToInt())
+                                    },
+                                )
+                                AssistantPane(
+                                    title = assistantTitle,
+                                    session = assistantState.session(key),
+                                    state = assistantState,
+                                    onClose = { setAssistantOpen(false) },
+                                    modifier = Modifier.width(threePane.assistantPane).fillMaxHeight(),
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -1108,6 +1229,7 @@ fun ZhihuMain(
                     .align(Alignment.BottomCenter)
                     .padding(
                         start = if (showListDetail && showDetailPane) listPaneWidth + LIST_DETAIL_DIVIDER_WIDTH else 0.dp,
+                        end = threePane?.let { it.assistantPane + LIST_DETAIL_DIVIDER_WIDTH } ?: 0.dp,
                         bottom = 16.dp + if (
                             !showDetailPane && showMainNavigation && showMainNavigationBar && !useNavigationRail && (!autoHideBottomBar || isBottomBarVisible)
                         ) {
@@ -1152,6 +1274,45 @@ fun ZhihuMain(
                     CompactReadingPlayerButton(
                         state = readingPlayerState,
                         onExpand = { isReadingPlayerExpandedByUser = true },
+                    )
+                }
+            }
+
+            // 双栏宽度放不下三栏时，助手以右侧抽屉叠加；桌面没有系统返回键，只靠遮罩和关闭按钮退出。
+            val showAssistantDrawer = assistantKey != null && assistantOpen && showListDetail && showDetailPane &&
+                threePane == null
+            AnimatedVisibility(
+                visible = showAssistantDrawer,
+                modifier = Modifier.fillMaxSize(),
+                enter = fadeIn(motion.defaultEffectsSpec()),
+                exit = fadeOut(motion.defaultEffectsSpec()),
+            ) {
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .testTag("assistant_drawer_scrim")
+                        .background(Color.Black.copy(alpha = 0.32f))
+                        .pointerInput(Unit) { detectTapGestures { setAssistantOpen(false) } },
+                )
+            }
+            AnimatedVisibility(
+                visible = showAssistantDrawer,
+                modifier = Modifier.align(Alignment.CenterEnd),
+                enter = slideInHorizontally(motion.slowSpatialSpec()) { it },
+                exit = slideOutHorizontally(motion.slowSpatialSpec()) { it },
+            ) {
+                val key = assistantKey
+                if (key != null) {
+                    AssistantPane(
+                        title = assistantTitle,
+                        session = assistantState.session(key),
+                        state = assistantState,
+                        onClose = { setAssistantOpen(false) },
+                        modifier = Modifier
+                            .width(minOf(360.dp, (contentWidth - 48.dp).coerceAtLeast(0.dp)))
+                            .fillMaxHeight()
+                            // 面板本身不消费点击，不拦一下会穿透到遮罩，点空白处就把抽屉关了。
+                            .pointerInput(Unit) { detectTapGestures { } },
                     )
                 }
             }

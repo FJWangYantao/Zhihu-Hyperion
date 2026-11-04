@@ -99,6 +99,7 @@ internal data class SegmentActionSheetState(
     val onLikeClick: () -> Unit,
     val onCommentClick: () -> Unit,
     val onCopyClick: () -> Unit,
+    val onAskAiClick: (() -> Unit)? = null,
 )
 
 internal val LocalSegmentActionSheetHost = staticCompositionLocalOf<(SegmentActionSheetState?) -> Unit> {
@@ -110,6 +111,14 @@ val LocalSegmentCommentSheet =
     staticCompositionLocalOf<@Composable (showComments: Boolean, onDismiss: () -> Unit, content: SegmentCommentHolder) -> Unit> {
         error("LocalSegmentCommentSheet is not provided")
     }
+
+/**
+ * 划线段上的「问 AI」入口。
+ *
+ * 只在应用启用了 AI 阅读助手的宿主流里非空；为 null 时划线弹层不渲染该按钮，
+ * 调用方收到的是划线片段本身，由它决定把片段放进哪个会话的引用区。
+ */
+val LocalSegmentAskAi = staticCompositionLocalOf<((SegmentHighlightSpan) -> Unit)?> { null }
 
 fun buildSegmentUnlikeBody(highlight: SegmentHighlightSpan): String = buildJsonObject {
     put("seg_ids", highlight.meta.segIds.joinToString(","))
@@ -182,6 +191,7 @@ internal fun SegmentHighlightInteractionHost(
     var selectedHighlight by remember { mutableStateOf<Pair<String, SegmentHighlightSpan>?>(null) }
     val openSegmentComments = LocalSegmentCommentHost.current
     val showSegmentActionSheet = LocalSegmentActionSheetHost.current
+    val askAiAboutSegment = LocalSegmentAskAi.current
     val displayTexts = remember(document) { document.segmentDisplayTexts() }
     val onSegmentHighlightClick: (SegmentHighlight) -> Unit = remember(displayTexts) {
         { node ->
@@ -199,7 +209,7 @@ internal fun SegmentHighlightInteractionHost(
     val selectedKey = selectedHighlight?.first
     val selected = selectedHighlight?.second
     val selectedMeta = selectedKey?.let(metaStates::get) ?: selected?.meta
-    LaunchedEffect(selected, selectedMeta, actionsEnabled) {
+    LaunchedEffect(selected, selectedMeta, actionsEnabled, askAiAboutSegment) {
         if (!actionsEnabled || selected == null || selectedKey == null || selectedMeta == null) {
             if (!actionsEnabled) selectedHighlight = null
             showSegmentActionSheet(null)
@@ -231,6 +241,14 @@ internal fun SegmentHighlightInteractionHost(
                     copyPlainText("segment_text", selected.displayText)
                     selectedHighlight = null
                     showSegmentActionSheet(null)
+                },
+                onAskAiClick = askAiAboutSegment?.let { ask ->
+                    {
+                        // 与复制一致：先关闭弹层再交给宿主，避免弹层在别的会话打开后还停在屏幕上。
+                        selectedHighlight = null
+                        showSegmentActionSheet(null)
+                        ask(selected.copy(meta = selectedMeta))
+                    }
                 },
             ),
         )
@@ -277,6 +295,7 @@ internal fun SegmentActionSheet(state: SegmentActionSheetState) {
         onLikeClick = state.onLikeClick,
         onCommentClick = state.onCommentClick,
         onCopyClick = state.onCopyClick,
+        onAskAiClick = state.onAskAiClick,
     )
 }
 
@@ -288,6 +307,7 @@ private fun SegmentActionSheet(
     onLikeClick: () -> Unit,
     onCommentClick: () -> Unit,
     onCopyClick: () -> Unit,
+    onAskAiClick: (() -> Unit)?,
 ) {
     // Keeps the legacy rule that drops PartiallyExpanded for short sheets; rememberBottomSheetState has no equivalent.
     @Suppress("DEPRECATION")
@@ -366,6 +386,17 @@ private fun SegmentActionSheet(
                             text = highlight.meta.commentCount.toString(),
                             modifier = Modifier.padding(start = 8.dp),
                         )
+                    }
+                    if (onAskAiClick != null) {
+                        IconButton(
+                            onClick = onAskAiClick,
+                            modifier = Modifier.testTag("segment_action_sheet_ask_ai"),
+                        ) {
+                            Icon(
+                                icon = AppIcons.AutoAwesome,
+                                contentDescription = "问 AI",
+                            )
+                        }
                     }
                     IconButton(onClick = onCopyClick) {
                         Icon(

@@ -75,6 +75,7 @@ import com.github.zly2006.zhihu.theme.PREF_FONT_SIZE
 import com.github.zly2006.zhihu.theme.PREF_LINE_HEIGHT
 import com.hrm.markdown.parser.ast.Document
 import com.hrm.markdown.renderer.Markdown
+import com.hrm.markdown.renderer.MarkdownConfig
 import com.hrm.markdown.renderer.MarkdownImageData
 import com.hrm.markdown.renderer.MarkdownTheme
 import org.koin.compose.koinInject
@@ -266,6 +267,7 @@ fun RenderMarkdown(
     header: (@Composable () -> Unit)? = null,
     footer: (@Composable () -> Unit)? = null,
     useTiqianRenderer: Boolean = false,
+    isStreaming: Boolean = false,
 ) {
     val document = remember(html) { htmlToMdAst(html) }
     RenderMarkdownDocument(
@@ -278,6 +280,7 @@ fun RenderMarkdown(
         header = header,
         footer = footer,
         useTiqianRenderer = useTiqianRenderer,
+        isStreaming = isStreaming,
     )
 }
 
@@ -291,6 +294,7 @@ fun RenderMarkdownText(
     header: (@Composable () -> Unit)? = null,
     footer: (@Composable () -> Unit)? = null,
     useTiqianRenderer: Boolean = false,
+    isStreaming: Boolean = false,
 ) {
     val document = remember(markdown) { markdownToMdAst(markdown) }
     RenderMarkdownDocument(
@@ -303,6 +307,7 @@ fun RenderMarkdownText(
         header = header,
         footer = footer,
         useTiqianRenderer = useTiqianRenderer,
+        isStreaming = isStreaming,
     )
 }
 
@@ -317,6 +322,7 @@ private fun RenderMarkdownDocument(
     header: (@Composable () -> Unit)?,
     footer: (@Composable () -> Unit)?,
     useTiqianRenderer: Boolean,
+    isStreaming: Boolean,
 ) {
     val previewImageUrls = remember(document) { document.previewImageUrls() }
     val navigator = LocalNavigator.current
@@ -342,7 +348,8 @@ private fun RenderMarkdownDocument(
                         resolveContent(url)?.let { navigator.onNavigate(it) }
                             ?: openExternalUrl(url)
                     }
-                    if (useTiqianRenderer && isTiqianMarkdownRendererAvailable) {
+                    // Tiqian 渲染器没有增量路径，流式生成时退回 Compose 渲染器，避免每个分片全量重排。
+                    if (useTiqianRenderer && isTiqianMarkdownRendererAvailable && !isStreaming) {
                         PlatformTiqianMarkdown(
                             document = document,
                             sourceMarkdown = sourceMarkdown,
@@ -375,6 +382,8 @@ private fun RenderMarkdownDocument(
                         )
                         Markdown(
                             document = document,
+                            config = if (isStreaming) MarkdownConfig.LlmStreaming else MarkdownConfig.Default,
+                            isStreaming = isStreaming,
                             imageContent = { data, imageModifier ->
                                 RenderImage(
                                     data = data,
