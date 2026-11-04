@@ -186,6 +186,8 @@ actual val isArticleHtmlExportSupported: Boolean = true
 
 actual val isArticleImageExportSupported: Boolean = true
 
+actual val isReadingAssistantSupported: Boolean = true
+
 actual val isPageTurnSupported: Boolean = false
 
 actual val isAnswerSwipeSupported: Boolean = false

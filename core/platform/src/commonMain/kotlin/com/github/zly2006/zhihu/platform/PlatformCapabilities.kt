@@ -49,6 +49,9 @@ expect val isArticleHtmlExportSupported: Boolean
 
 expect val isArticleImageExportSupported: Boolean
 
+/** 文章问答助手：依赖随桌面应用打包的 Pi 后台运行时，其他平台暂不提供。 */
+expect val isReadingAssistantSupported: Boolean
+
 expect val isPageTurnSupported: Boolean
 
 expect val isAnswerSwipeSupported: Boolean

@@ -100,9 +100,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.compose.currentBackStackEntryAsState
 import coil3.compose.AsyncImage
+import com.github.zly2006.zhihu.account.ZhihuAccountStore
 import com.github.zly2006.zhihu.ai.CustomAiConfig
 import com.github.zly2006.zhihu.ai.CustomAiConfigDialog
 import com.github.zly2006.zhihu.ai.CustomAiConfigFile
+import com.github.zly2006.zhihu.ai.ReadingAssistant
 import com.github.zly2006.zhihu.data.DataHolder
 import com.github.zly2006.zhihu.data.HistoryStorage
 import com.github.zly2006.zhihu.data.VoteUpState
@@ -128,6 +130,7 @@ import com.github.zly2006.zhihu.platform.isAnswerSwipeSupported
 import com.github.zly2006.zhihu.platform.isArticleHtmlExportSupported
 import com.github.zly2006.zhihu.platform.isArticleImageExportSupported
 import com.github.zly2006.zhihu.platform.isLegacyWebViewSupported
+import com.github.zly2006.zhihu.platform.isReadingAssistantSupported
 import com.github.zly2006.zhihu.platform.rememberPlainTextClipboard
 import com.github.zly2006.zhihu.platform.rememberUserMessageSink
 import com.github.zly2006.zhihu.reading.TtsState
@@ -141,6 +144,8 @@ import com.github.zly2006.zhihu.ui.article.AigcFlagSheet
 import com.github.zly2006.zhihu.ui.article.AnswerDoubleTapAction
 import com.github.zly2006.zhihu.ui.article.AnswerEndorsementChip
 import com.github.zly2006.zhihu.ui.article.ArticleActionsMenu
+import com.github.zly2006.zhihu.ui.article.ArticleAssistantSheet
+import com.github.zly2006.zhihu.ui.article.ArticleAssistantSessions
 import com.github.zly2006.zhihu.ui.article.ArticleFloatingActionBar
 import com.github.zly2006.zhihu.ui.article.ArticleSummarySheet
 import com.github.zly2006.zhihu.ui.article.ArticleVideoAttachmentContent
@@ -189,6 +194,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.koinInject
+import org.koin.mp.KoinPlatform
 import zhihu.shared.generated.resources.Res
 import kotlin.math.max
 
@@ -291,6 +297,17 @@ fun ArticleScreen(
     var showCollectionDialog by remember { mutableStateOf(false) }
     var showActionsMenu by remember { mutableStateOf(false) }
     var showSummaryDialog by remember { mutableStateOf(false) }
+    var showAssistantDialog by remember { mutableStateOf(false) }
+    // 阅读助手依赖随桌面应用打包的后台运行时；其他平台没有绑定，入口不显示。
+    val readingAssistant = remember { KoinPlatform.getKoin().getOrNull<ReadingAssistant>() }
+    val accountStore = koinInject<ZhihuAccountStore>()
+    val assistantSessions = koinInject<ArticleAssistantSessions>()
+    val assistantSessionId = listOf(
+        accountStore.accountsState.value.activeAccountId.orEmpty(),
+        article.type.name,
+        article.id.toString(),
+    ).joinToString(":")
+    val assistantSession = remember(assistantSessionId) { assistantSessions.of(assistantSessionId) }
     val customAiConfigFile = koinInject<CustomAiConfigFile>()
     val httpEngine = koinInject<HttpClientEngine>()
     var customAiConfig by remember { mutableStateOf(CustomAiConfig()) }
@@ -341,6 +358,7 @@ fun ArticleScreen(
         !showCollectionDialog &&
         !showActionsMenu &&
         !showSummaryDialog &&
+        !showAssistantDialog &&
         !showAigcFlagSheet &&
         !showExportDialog &&
         !showDoubleTapActionDialog &&
@@ -1274,6 +1292,14 @@ fun ArticleScreen(
             showSummaryDialog = true
             requestSummary()
         },
+        onAssistantRequest = if (isReadingAssistantSupported && readingAssistant != null) {
+            {
+                customAiConfig = customAiConfigFile.load()
+                showAssistantDialog = true
+            }
+        } else {
+            null
+        },
         onAigcFlagRequest = {
             showAigcFlagSheet = true
             viewModel.loadAigcFlagStatus(aigcVote)
@@ -1305,15 +1331,35 @@ fun ArticleScreen(
         },
         onRetryRequest = ::requestSummary,
     )
+    val assistant = readingAssistant
+    if (assistant != null) {
+        ArticleAssistantSheet(
+            showDialog = showAssistantDialog,
+            session = assistantSession,
+            assistant = assistant,
+            config = customAiConfig,
+            articleTitle = viewModel.title,
+            articleMarkdown = viewModel::convertToMarkdown,
+            onConfigureModel = { showCustomAiDialog = true },
+            onDismissRequest = { showAssistantDialog = false },
+        )
+    }
     if (showCustomAiDialog) {
         CustomAiConfigDialog(
             initialConfig = customAiConfig,
             onDismissRequest = { showCustomAiDialog = false },
             onSave = { config ->
                 showCustomAiDialog = false
-                customAiConfig = config.copy(useForSummary = config.isComplete)
+                // 从阅读助手进来的配置只改模型连接，不顺手把「总结本文」切到自定义 AI。
+                customAiConfig = if (showAssistantDialog) {
+                    config.copy(useForSummary = customAiConfig.useForSummary)
+                } else {
+                    config.copy(useForSummary = config.isComplete)
+                }
                 customAiConfigFile.save(customAiConfig)
                 if (showSummaryDialog) requestSummary()
+                // 换模型后后台会话会重建，历史问答对不上新模型，直接开新会话。
+                if (showAssistantDialog) assistantSession.reset()
             },
         )
     }

@@ -65,3 +65,6 @@ tools/zhihu-formula-corpus/
 
 # Local Maven publications are build inputs, never source dependencies.
 third_party/native-maven/
+
+# 阅读助手后台进程的 Node 依赖由 npm install 生成，不提交。
+node_modules/

@@ -98,6 +98,8 @@ fun ArticleActionsMenu(
     showMenu: Boolean,
     onDismissRequest: () -> Unit,
     onSummaryRequest: () -> Unit,
+    /** 平台没有阅读助手运行时（例如移动端）时传 null，入口不显示。 */
+    onAssistantRequest: (() -> Unit)? = null,
     onAigcFlagRequest: () -> Unit,
     onExportRequest: () -> Unit,
     onSetImmersiveDoubleTap: () -> Unit = {},
@@ -342,6 +344,18 @@ fun ArticleActionsMenu(
                 onSummaryRequest()
             },
         )
+
+        if (onAssistantRequest != null) {
+            Spacer(modifier = Modifier.height(12.dp))
+            MenuActionButton(
+                icon = AppIcons.AutoAwesome,
+                text = "问 AI",
+                onClick = {
+                    onDismissRequest()
+                    onAssistantRequest()
+                },
+            )
+        }
 
         Spacer(modifier = Modifier.height(12.dp))
         MenuActionButton(
